@@ -4,14 +4,13 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    tools:context=".MainActivity">
+    tools:context=".RoomActivityExample">
 
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_gravity="center"
         android:gravity="center"
-        android:orientation="vertical"
         android:padding="20dp"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
@@ -19,16 +18,10 @@
         app:layout_constraintTop_toTopOf="parent">
 
         <Button
-            android:id="@+id/button_join_room_using_whereby_room_activity"
+            android:id="@+id/button_join_room"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
-            android:text="Start using\nWherebyRoomActivity" />
-
-        <Button
-            android:id="@+id/button_join_room_using_whereby_room_fragment"
-            android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            android:text="Start using\nWherebyRoomFragment" />
+            android:text="Join room!" />
     </LinearLayout>
 
 </androidx.constraintlayout.widget.ConstraintLayout>
