@@ -3,27 +3,18 @@ package com.whereby.demoapp;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.fragment.app.FragmentManager;
 import androidx.fragment.app.FragmentTransaction;
-import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 
 import android.content.BroadcastReceiver;
-import android.content.Context;
-import android.content.Intent;
-import android.content.IntentFilter;
 import android.graphics.Color;
 import android.os.Bundle;
-import android.util.Log;
 import android.widget.Button;
-
-import java.net.MalformedURLException;
-import java.net.URL;
 
 import com.whereby.sdk.*;
 
+import static com.whereby.demoapp.RoomHelper.*;
 import static com.whereby.sdk.WherebyConstants.*;
 
 public class RoomFragmentExample extends AppCompatActivity {
-
-    private final static String TAG = RoomFragmentExample.class.getSimpleName();
 
     private BroadcastReceiver mBroadcastReceiver;
     private Button mRemoveFragmentButton, mToggleCameraButton, mToggleMicrophoneButton;
@@ -54,7 +45,7 @@ public class RoomFragmentExample extends AppCompatActivity {
 
     @Override
     protected void onStop() {
-        unregisterLocalBroadcastReceiver();
+        unregisterLocalBroadcastReceiver(mBroadcastReceiver, this);
         super.onStop();
     }
     //endregion
@@ -94,8 +85,8 @@ public class RoomFragmentExample extends AppCompatActivity {
         // Optional: this allows to receive async events through a broadcast receiver during the meeting.
         // Comment the following lines to disable.
         room.setEventBroadcastEnabled(true);
-        unregisterLocalBroadcastReceiver(); // Need to unregister first, in case the fragment was not removed
-        registerLocalBroadcastReceiver();
+        unregisterLocalBroadcastReceiver(mBroadcastReceiver, this); // Need to unregister first, in case the fragment was not removed
+        mBroadcastReceiver = registerLocalBroadcastReceiver(this);
 
         // Optional: this allows to receive async events through a listener during the meeting, by
         // implementing the WherebyEventListener methods.
@@ -103,23 +94,6 @@ public class RoomFragmentExample extends AppCompatActivity {
         setRoomFragmentEventListener();
 
         return room;
-    }
-
-    private URL createRoomUrl() {
-        URL roomURL = null;
-        try {
-            roomURL = new URL(Constants.roomUrlString);
-        } catch (MalformedURLException e) {
-            e.printStackTrace();
-        }
-        return roomURL;
-    }
-
-    private WherebyRoomParameters createRoomParameters() {
-        WherebyRoomParameters roomParameters = new WherebyRoomParameters();
-        roomParameters.setDisplayName("Participant name");
-        //...
-        return roomParameters;
     }
 
     private void setRoomFragmentEventListener() {
@@ -162,32 +136,10 @@ public class RoomFragmentExample extends AppCompatActivity {
         });
     }
 
-    private void registerLocalBroadcastReceiver() {
-        IntentFilter intentFilter = new IntentFilter(ROOM_BROADCAST_EVENT_ACTION);
-        mBroadcastReceiver = new BroadcastReceiver() {
-            @Override
-            public void onReceive(Context context, Intent intent) {
-                WherebyRoomEvent event = (WherebyRoomEvent) intent.getSerializableExtra(ROOM_BROADCAST_EVENT_NAME);
-
-                // Process event:
-                Log.d(TAG, event.getRaw());
-            }
-        };
-        LocalBroadcastManager.getInstance(this).registerReceiver(mBroadcastReceiver, intentFilter);
-    }
-
-    private void unregisterLocalBroadcastReceiver() {
-        if (mBroadcastReceiver == null) {
-            return;
-        }
-        LocalBroadcastManager.getInstance(this).unregisterReceiver(mBroadcastReceiver);
-        mBroadcastReceiver = null;
-    }
-
     private void removeRoomFragment() {
         initMediaButtons();
         mRemoveFragmentButton.setEnabled(false);
-        unregisterLocalBroadcastReceiver();
+        unregisterLocalBroadcastReceiver(mBroadcastReceiver, this);
         if (mRoomFragment == null) {
             return;
         }
