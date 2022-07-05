@@ -14,16 +14,6 @@
         android:theme="@style/Theme.DemoApp"
         tools:targetApi="31">
         <activity
-            android:name=".CustomWherebyRoomActivity"
-            android:theme="@style/Theme.AppCompat.NoActionBar"
-            android:exported="false" />
-        <activity
-            android:name=".RoomFragmentExample"
-            android:exported="false" />
-        <activity
-            android:name=".RoomActivityExample"
-            android:exported="false" />
-        <activity
             android:name=".MainActivity"
             android:exported="true">
             <intent-filter>

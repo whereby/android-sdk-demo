@@ -1,32 +1,178 @@
 package com.whereby.demoapp;
 
-import androidx.appcompat.app.AppCompatActivity;
+import static com.whereby.sdk.WherebyConstants.*;
 
-import android.content.Intent;
+import androidx.appcompat.app.AppCompatActivity;
+import androidx.fragment.app.FragmentManager;
+import androidx.fragment.app.FragmentTransaction;
+
+import android.graphics.Color;
 import android.os.Bundle;
 import android.widget.Button;
 
+import com.whereby.sdk.*;
+
+import java.net.MalformedURLException;
+import java.net.URL;
+
 public class MainActivity extends AppCompatActivity {
 
+    /**
+     * Replace with your room URL.
+     * See https://docs.whereby.com/creating-and-deleting-rooms
+     */
+    private String mRoomUrlString = "";
+
+    private Button mToggleCameraButton, mToggleMicrophoneButton;
+    private WherebyRoomFragment mRoomFragment;
+    private boolean mIsPresentingFullScreen = false;
+
+    //region Activity lifecycle
     @Override
-    protected void onCreate(Bundle savedInstanceState) {
+    public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-        setTitle("Whereby demo app");
 
-        Button joinRoomUsingWherebyRoomActivity = findViewById(R.id.button_join_room_using_whereby_room_activity);
-        joinRoomUsingWherebyRoomActivity.setOnClickListener(view -> {
-            navigateToActivity(RoomActivityExample.class);
-        });
+        Button startEmbeddedButton = findViewById(R.id.button_start_embedded);
+        Button startFullScreenButton = findViewById(R.id.button_start_fullscreen);
+        mToggleCameraButton = findViewById(R.id.button_toggle_camera);
+        mToggleMicrophoneButton = findViewById(R.id.button_toggle_microphone);
+        Button removeFragmentButton = findViewById(R.id.button_remove_fragment);
 
-        Button joinRoomUsingWherebyRoomFragment = findViewById(R.id.button_join_room_using_whereby_room_fragment);
-        joinRoomUsingWherebyRoomFragment.setOnClickListener(view -> {
-            navigateToActivity(RoomFragmentExample.class);
+        startEmbeddedButton.setOnClickListener(view -> embedInFragment(R.id.layout_fragment_container_embedded, false));
+        startFullScreenButton.setOnClickListener(view -> embedInFragment(R.id.layout_fragment_container_fullscreen, true));
+        mToggleCameraButton.setOnClickListener(view -> mRoomFragment.toggleCamera());
+        mToggleMicrophoneButton.setOnClickListener(view -> mRoomFragment.toggleMicrophone());
+        removeFragmentButton.setOnClickListener(view -> this.removeRoomFragment());
+
+        initMediaButtons();
+    }
+
+    @Override
+    public void onBackPressed() {
+        if (mIsPresentingFullScreen) {
+            mIsPresentingFullScreen = false;
+            removeRoomFragment();
+        } else {
+            super.onBackPressed();
+        }
+    }
+    //endregion
+
+    //region private
+    private void embedInFragment(int frameLayout, boolean isFullScreen) {
+        mIsPresentingFullScreen = isFullScreen;
+        initMediaButtons();
+
+        if (mRoomFragment != null) {
+            removeRoomFragment();
+        }
+
+        mRoomFragment = new WherebyRoomFragment();
+
+        Bundle bundle = new Bundle();
+        bundle.putSerializable(ROOM_ARGUMENT_KEY, createWherebyRoom());
+        mRoomFragment.setArguments(bundle);
+
+        // Optional: this allows to receive async events during the meeting when using the room fragment, by implementing the
+        // WherebyEventListener methods.
+        // Comment the following line to disable.
+        setRoomFragmentEventListener();
+
+        FragmentManager fragmentManager = getSupportFragmentManager();
+        FragmentTransaction fragmentTransaction = fragmentManager.beginTransaction();
+        fragmentTransaction.replace(frameLayout, mRoomFragment);
+        fragmentTransaction.commit();
+        mRoomFragment.join();
+    }
+
+    private WherebyRoom createWherebyRoom() {
+        WherebyRoom room = new WherebyRoom(createRoomUrl());
+
+        // Optional: set parameters to customize the room before joining the meeting.
+        // Comment the following line to skip room customization.
+        room.setParameters(createRoomParameters());
+        return room;
+    }
+
+    private URL createRoomUrl() {
+        URL roomURL = null;
+        try {
+            roomURL = new URL(mRoomUrlString);
+        } catch (MalformedURLException e) {
+            e.printStackTrace();
+        }
+        return roomURL;
+    }
+
+    private WherebyRoomParameters createRoomParameters() {
+        WherebyRoomParameters roomParameters = new WherebyRoomParameters();
+        roomParameters.setMicrophoneEnabledAtStart(false);
+        roomParameters.setCameraEnabledAtStart(true);
+        roomParameters.setDisplayName("Participant name");
+        //...
+        return roomParameters;
+    }
+
+    private void setRoomFragmentEventListener() {
+        mRoomFragment.setEventListener(new WherebyEventListener() {
+
+            // All the methods below are optional:
+            @Override
+            public void onRoomReady() {
+                runOnUiThread(() -> {
+                    mToggleCameraButton.setEnabled(true);
+                    mToggleMicrophoneButton.setEnabled(true);
+                });
+            }
+
+            @Override
+            public void onMicrophoneToggled(boolean enabled) {
+                setButtonBackgroundColor(mToggleMicrophoneButton, enabled);
+            }
+
+            @Override
+            public void onCameraToggled(boolean enabled) {
+                setButtonBackgroundColor(mToggleCameraButton, enabled);
+            }
+
+            // Helper:
+            private void setButtonBackgroundColor(Button button, boolean enabled) {
+                button.setBackgroundColor(enabled
+                        ? getResources().getColor(R.color.green)
+                        : getResources().getColor(R.color.red));
+            }
+
+            @Override
+            public void onLocalParticipantLeft(boolean isRemoved) {
+                runOnUiThread(() -> {
+                    initMediaButtons();
+                });
+            }
+
+            //...
         });
     }
 
-    private void navigateToActivity(Class activityClass) {
-        Intent intent = new Intent(MainActivity.this, activityClass);
-        startActivity(intent);
+    private void removeRoomFragment() {
+        initMediaButtons();
+
+        if (mRoomFragment == null) {
+            return;
+        }
+
+        FragmentManager fragmentManager = getSupportFragmentManager();
+        FragmentTransaction fragmentTransaction = fragmentManager.beginTransaction();
+        fragmentTransaction.remove(mRoomFragment);
+        fragmentTransaction.commit();
+        mRoomFragment = null;
     }
+
+    private void initMediaButtons() {
+        mToggleCameraButton.setBackgroundColor(Color.GRAY);
+        mToggleMicrophoneButton.setBackgroundColor(Color.GRAY);
+        mToggleCameraButton.setEnabled(false);
+        mToggleMicrophoneButton.setEnabled(false);
+    }
+    //endregion
 }
