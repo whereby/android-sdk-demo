@@ -7,28 +7,84 @@
     tools:context=".MainActivity">
 
     <LinearLayout
+        android:id="@+id/layout_join_room"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_gravity="center"
         android:gravity="center"
-        android:orientation="vertical"
-        android:padding="20dp"
-        app:layout_constraintBottom_toBottomOf="parent"
+        android:padding="8dp"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent">
 
         <Button
-            android:id="@+id/button_join_room_using_whereby_room_activity"
-            android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            android:text="Start using\nWherebyRoomActivity" />
+            android:id="@+id/button_start_embedded"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_margin="2dp"
+            android:layout_weight="1"
+            android:text="Start embedded" />
 
         <Button
-            android:id="@+id/button_join_room_using_whereby_room_fragment"
-            android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            android:text="Start using\nWherebyRoomFragment" />
+            android:id="@+id/button_start_fullscreen"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_margin="2dp"
+            android:layout_weight="1"
+            android:text="Start fullscreen" />
+
     </LinearLayout>
+
+    <FrameLayout
+        android:id="@+id/layout_fragment_container_embedded"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_marginStart="16dp"
+        android:layout_marginEnd="16dp"
+        app:layout_constraintBottom_toTopOf="@+id/layout_media_buttons"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintHorizontal_bias="0.494"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/layout_join_room" />
+
+    <LinearLayout
+        android:id="@+id/layout_media_buttons"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:padding="8dp"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent">
+
+        <Button
+            android:id="@+id/button_toggle_camera"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_margin="2dp"
+            android:layout_weight="1"
+            android:text="Toggle camera" />
+
+        <Button
+            android:id="@+id/button_toggle_microphone"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_margin="2dp"
+            android:layout_weight="1"
+            android:text="Toggle microphone" />
+
+        <Button
+            android:id="@+id/button_remove_fragment"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_margin="2dp"
+            android:layout_weight="1"
+            android:text="Remove fragment" />
+
+    </LinearLayout>
+
+    <FrameLayout
+        android:id="@+id/layout_fragment_container_fullscreen"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent" />
+
 
 </androidx.constraintlayout.widget.ConstraintLayout>
