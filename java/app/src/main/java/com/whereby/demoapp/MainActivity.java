@@ -41,8 +41,8 @@ public class MainActivity extends AppCompatActivity {
 
         startEmbeddedButton.setOnClickListener(view -> embedInFragment(R.id.layout_fragment_container_embedded, false));
         startFullScreenButton.setOnClickListener(view -> embedInFragment(R.id.layout_fragment_container_fullscreen, true));
-        mToggleCameraButton.setOnClickListener(view -> mRoomFragment.toggleCamera());
-        mToggleMicrophoneButton.setOnClickListener(view -> mRoomFragment.toggleMicrophone());
+        mToggleCameraButton.setOnClickListener(view -> mRoomFragment.toggleCameraEnabled());
+        mToggleMicrophoneButton.setOnClickListener(view -> mRoomFragment.toggleMicrophoneEnabled());
         removeFragmentButton.setOnClickListener(view -> this.removeRoomFragment());
 
         initMediaButtons();
@@ -71,7 +71,7 @@ public class MainActivity extends AppCompatActivity {
         mRoomFragment = new WherebyRoomFragment();
 
         Bundle bundle = new Bundle();
-        bundle.putSerializable(ROOM_ARGUMENT_KEY, createWherebyRoom());
+        bundle.putSerializable(ROOM_CONFIG_KEY, createWherebyRoomConfig());
         mRoomFragment.setArguments(bundle);
 
         // Optional: this allows to receive async events during the meeting when using the room fragment, by implementing the
@@ -86,13 +86,16 @@ public class MainActivity extends AppCompatActivity {
         mRoomFragment.join();
     }
 
-    private WherebyRoom createWherebyRoom() {
-        WherebyRoom room = new WherebyRoom(createRoomUrl());
+    private WherebyRoomConfig createWherebyRoomConfig() {
+        WherebyRoomConfig roomConfig = new WherebyRoomConfig(createRoomUrl());
 
-        // Optional: set parameters to customize the room before joining the meeting.
-        // Comment the following line to skip room customization.
-        room.setParameters(createRoomParameters());
-        return room;
+        // Optional: customize the room before joining the meeting.
+        // Comment the following lines to skip room customization.
+        roomConfig.setMicrophoneEnabledAtStart(false);
+        roomConfig.setCameraEnabledAtStart(true);
+        roomConfig.setDisplayName("Participant name");
+        //...
+        return roomConfig;
     }
 
     private URL createRoomUrl() {
@@ -103,15 +106,6 @@ public class MainActivity extends AppCompatActivity {
             e.printStackTrace();
         }
         return roomURL;
-    }
-
-    private WherebyRoomParameters createRoomParameters() {
-        WherebyRoomParameters roomParameters = new WherebyRoomParameters();
-        roomParameters.setMicrophoneEnabledAtStart(false);
-        roomParameters.setCameraEnabledAtStart(true);
-        roomParameters.setDisplayName("Participant name");
-        //...
-        return roomParameters;
     }
 
     private void setRoomFragmentEventListener() {
