@@ -5,7 +5,7 @@ This repository contains two sample apps in Java and Kotlin using the [Whereby A
 
 Other platforms: 
 - [iOS SDK](https://github.com/whereby/ios-sdk)
-- [Web SDK](https://github.com/whereby/browser-sdk)
+- [Browser SDK](https://github.com/whereby/browser-sdk)
 
 ## Usage
 1. In Android Studio, open one of the two projects: Java or Kotlin
