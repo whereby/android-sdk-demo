@@ -3,12 +3,14 @@ plugins {
 }
 
 android {
-    compileSdk 32
+    namespace "com.whereby.demoapp"
+
+    compileSdk 34
 
     defaultConfig {
         applicationId "com.whereby.demoapp"
         minSdk 23
-        targetSdk 32
+        targetSdk 34
         versionCode 1
         versionName "1.0"
 
