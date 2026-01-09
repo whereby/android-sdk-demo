@@ -39,6 +39,6 @@ dependencies {
     androidTestImplementation 'androidx.test.espresso:espresso-core:3.4.0'
 
     // Whereby SDK
-    def WHEREBY_SDK_VERSION = '0.1.0'
+    def WHEREBY_SDK_VERSION = '0.1.1'
     implementation("com.github.whereby:android-sdk:$WHEREBY_SDK_VERSION@aar") { transitive = true }
 }
