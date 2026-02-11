@@ -1,133 +1,229 @@
 package com.whereby.demoapp;
 
-import static com.whereby.sdk.WherebyConstants.*;
-
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.fragment.app.Fragment;
 import androidx.fragment.app.FragmentManager;
-import androidx.fragment.app.FragmentTransaction;
 
 import android.graphics.Color;
 import android.os.Bundle;
+import android.util.Log;
+import android.view.View;
 import android.widget.Button;
+import android.widget.FrameLayout;
+import android.widget.Toast;
 
+import com.google.android.material.textfield.TextInputEditText;
 import com.whereby.sdk.*;
 
-import java.net.MalformedURLException;
-import java.net.URL;
-
 public class MainActivity extends AppCompatActivity {
+
+    // ─────────────────────────────────────────────
+    // Constants
+    // ─────────────────────────────────────────────
+
+    private static final String TAG_ROOM_FRAGMENT = "WHEREBY_ROOM_FRAGMENT";
 
     /**
      * Replace with your room URL.
      * See https://docs.whereby.com/creating-and-deleting-rooms
      */
-    private String mRoomUrlString = "";
+    private static final String roomUrlString = "";
 
-    private Button mToggleCameraButton, mToggleMicrophoneButton;
-    private WherebyRoomFragment mRoomFragment;
-    private boolean mIsPresentingFullScreen = false;
+    // ─────────────────────────────────────────────
+    // Views
+    // ─────────────────────────────────────────────
 
-    //region Activity lifecycle
+    private TextInputEditText textInput;
+    private Button toggleCameraButton, toggleMicrophoneButton, removeFragmentButton;
+    private FrameLayout fullScreenFrameLayout;
+
+    // ─────────────────────────────────────────────
+    // Activity lifecycle
+    // ─────────────────────────────────────────────
+
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        Button startEmbeddedButton = findViewById(R.id.button_start_embedded);
-        Button startFullScreenButton = findViewById(R.id.button_start_fullscreen);
-        mToggleCameraButton = findViewById(R.id.button_toggle_camera);
-        mToggleMicrophoneButton = findViewById(R.id.button_toggle_microphone);
-        Button removeFragmentButton = findViewById(R.id.button_remove_fragment);
+        bindViews();
+        initMediaButtons();
+        setupClickListeners();
+    }
 
-        startEmbeddedButton.setOnClickListener(view -> embedInFragment(R.id.layout_fragment_container_embedded, false));
-        startFullScreenButton.setOnClickListener(view -> embedInFragment(R.id.layout_fragment_container_fullscreen, true));
-        mToggleCameraButton.setOnClickListener(view -> mRoomFragment.toggleCameraEnabled());
-        mToggleMicrophoneButton.setOnClickListener(view -> mRoomFragment.toggleMicrophoneEnabled());
+    // ─────────────────────────────────────────────
+    // UI setup
+    // ─────────────────────────────────────────────
+
+    private void bindViews() {
+        textInput = findViewById(R.id.text_input_room_url);
+        textInput.setText(roomUrlString);
+
+        toggleMicrophoneButton = findViewById(R.id.button_toggle_microphone);
+        toggleCameraButton = findViewById(R.id.button_toggle_camera);
+        removeFragmentButton = findViewById(R.id.button_remove_fragment);
+
+        fullScreenFrameLayout = findViewById(R.id.layout_fragment_container_fullscreen);
+    }
+
+    private void setControlsEnabled(boolean enabled) {
+        toggleMicrophoneButton.setEnabled(enabled);
+        toggleCameraButton.setEnabled(enabled);
+    }
+
+    private void initMediaButtons() {
+        toggleCameraButton.setBackgroundColor(Color.GRAY);
+        toggleMicrophoneButton.setBackgroundColor(Color.GRAY);
+        setControlsEnabled(false);
+    }
+
+    private void setupClickListeners() {
+        Button loadEmbeddedButton = findViewById(R.id.button_start_embedded);
+        Button loadFullscreenButton = findViewById(R.id.button_start_fullscreen);
+
+        loadEmbeddedButton.setOnClickListener(v -> {
+            navigateToRoomFragment(R.id.layout_fragment_container_embedded);
+            setControlsEnabled(true);
+        });
+
+        loadFullscreenButton.setOnClickListener(v -> {
+            fullScreenFrameLayout.setVisibility(View.VISIBLE);
+            navigateToRoomFragment(R.id.layout_fragment_container_fullscreen);
+        });
+
+        toggleCameraButton.setOnClickListener(v -> {
+            WherebyRoomFragment fragment = getRoomFragment();
+            if (fragment != null) fragment.toggleCameraEnabled();
+        });
+
+        toggleMicrophoneButton.setOnClickListener(v -> {
+            WherebyRoomFragment fragment = getRoomFragment();
+            if (fragment != null) fragment.toggleMicrophoneEnabled();
+        });
+
         removeFragmentButton.setOnClickListener(view -> this.removeRoomFragment());
+    }
+
+    // ─────────────────────────────────────────────
+    // Fragment navigation
+    // ─────────────────────────────────────────────
+
+    private void navigateToRoomFragment(int containerId) {
+        setControlsEnabled(false);
+        removeRoomFragment();
+
+        WherebyRoomConfig roomConfig = buildWherebyRoomConfig();
+
+        if (roomConfig == null) return;
+
+        WherebyRoomFragment fragment = WherebyRoomFragment.newInstance(roomConfig);
+        attachWherebyRoomListener(fragment);
+
+        getSupportFragmentManager()
+                .beginTransaction()
+                .replace(containerId, fragment, TAG_ROOM_FRAGMENT)
+                .commit();
+    }
+
+    private void removeRoomFragment() {
+        FragmentManager fm = getSupportFragmentManager();
+        Fragment existing = fm.findFragmentByTag(TAG_ROOM_FRAGMENT);
+
+        if (existing != null) {
+            fm.beginTransaction()
+                    .remove(existing)
+                    .commit();
+        }
 
         initMediaButtons();
     }
 
-    @Override
-    public void onBackPressed() {
-        if (mIsPresentingFullScreen) {
-            mIsPresentingFullScreen = false;
-            removeRoomFragment();
-        } else {
-            super.onBackPressed();
-        }
-    }
-    //endregion
-
-    //region private
-    private void embedInFragment(int frameLayout, boolean isFullScreen) {
-        mIsPresentingFullScreen = isFullScreen;
-        initMediaButtons();
-
-        if (mRoomFragment != null) {
-            removeRoomFragment();
-        }
-
-        mRoomFragment = new WherebyRoomFragment();
-
-        Bundle bundle = new Bundle();
-        bundle.putSerializable(ROOM_CONFIG_KEY, createWherebyRoomConfig());
-        mRoomFragment.setArguments(bundle);
-
-        // Optional: this allows to receive async events during the meeting when using the room fragment, by implementing the
-        // WherebyEventListener methods.
-        // Comment the following line to disable.
-        setRoomFragmentEventListener();
-
-        FragmentManager fragmentManager = getSupportFragmentManager();
-        FragmentTransaction fragmentTransaction = fragmentManager.beginTransaction();
-        fragmentTransaction.replace(frameLayout, mRoomFragment);
-        fragmentTransaction.commit();
-        mRoomFragment.join();
+    @Nullable
+    private WherebyRoomFragment getRoomFragment() {
+        Fragment f = getSupportFragmentManager().findFragmentByTag(TAG_ROOM_FRAGMENT);
+        return (f instanceof WherebyRoomFragment) ? (WherebyRoomFragment) f : null;
     }
 
-    private WherebyRoomConfig createWherebyRoomConfig() {
-        WherebyRoomConfig roomConfig = new WherebyRoomConfig(createRoomUrl());
+    // ─────────────────────────────────────────────
+    // Whereby room configuration
+    // ─────────────────────────────────────────────
+
+    @Nullable
+    private WherebyRoomConfig buildWherebyRoomConfig() {
+        if(textInput.getText() == null) {
+            return null;
+        }
+        String roomUrl = textInput.getText().toString().trim();
+
+        WherebyRoomConfig roomConfig = new WherebyRoomConfig(roomUrl);
 
         // Optional: customize the room before joining the meeting.
         // Comment the following lines to skip room customization.
-        roomConfig.setMicrophoneEnabledAtStart(false);
-        roomConfig.setCameraEnabledAtStart(true);
-        roomConfig.setDisplayName("Participant name");
-        //...
+        roomConfig.setDisplayName("Name");
+        roomConfig.setRoomBackgroundVisible(false);
+        // ...
         return roomConfig;
     }
 
-    private URL createRoomUrl() {
-        URL roomURL = null;
-        try {
-            roomURL = new URL(mRoomUrlString);
-        } catch (MalformedURLException e) {
-            e.printStackTrace();
-        }
-        return roomURL;
-    }
+    // ─────────────────────────────────────────────
+    // Whereby events
+    // ─────────────────────────────────────────────
 
-    private void setRoomFragmentEventListener() {
-        mRoomFragment.setEventListener(new WherebyEventListener() {
+    private void attachWherebyRoomListener(WherebyRoomFragment fragment) {
+        fragment.setListener(new WherebyRoomListener() {
 
             // All the methods below are optional:
             @Override
             public void onRoomReady() {
                 runOnUiThread(() -> {
-                    mToggleCameraButton.setEnabled(true);
-                    mToggleMicrophoneButton.setEnabled(true);
+                    setControlsEnabled(true);
                 });
             }
 
             @Override
+            public void onLocalParticipantKnocked() {
+                // ...
+            }
+
+            @Override
+            public void onLocalParticipantJoined() {
+                // ...
+            }
+
+            @Override
+            public void onLocalParticipantLeft(boolean isRemoved) {
+                runOnUiThread(() -> {
+                    initMediaButtons();
+                });
+            }
+
+            @Override
+            public void onRemoteParticipantJoined(WherebyRoomParticipant participant) {
+                // ...
+                Log.d("onRemoteParticipantJoined", "Participant metadata: " + participant.getMetadata());
+            }
+
+            @Override
+            public void onRemoteParticipantLeave(WherebyRoomParticipant participant) {
+                // ...
+            }
+
+            @Override
+            public void onParticipantCountUpdated(int count) {
+                Log.d("onParticipantCountUpdated", "Count: " + count);
+                // ...
+            }
+
+            @Override
             public void onMicrophoneToggled(boolean enabled) {
-                setButtonBackgroundColor(mToggleMicrophoneButton, enabled);
+                    setButtonBackgroundColor(toggleMicrophoneButton, enabled);
             }
 
             @Override
             public void onCameraToggled(boolean enabled) {
-                setButtonBackgroundColor(mToggleCameraButton, enabled);
+                    setButtonBackgroundColor(toggleCameraButton, enabled);
             }
 
             // Helper:
@@ -138,35 +234,32 @@ public class MainActivity extends AppCompatActivity {
             }
 
             @Override
-            public void onLocalParticipantLeft(boolean isRemoved) {
-                runOnUiThread(() -> {
-                    initMediaButtons();
-                });
+            public void onError(@NonNull Throwable error) {
+                Log.e("onError", "Whereby SDK:", error);
+                runOnUiThread(() ->
+                        Toast.makeText(MainActivity.this,
+                                "Whereby error: " + (error.getMessage() != null ? error.getMessage() : error.getClass().getSimpleName()),
+                                Toast.LENGTH_LONG
+                        ).show()
+                );
             }
 
             //...
         });
     }
 
-    private void removeRoomFragment() {
-        initMediaButtons();
+    // ─────────────────────────────────────────────
+    // Back navigation
+    // ─────────────────────────────────────────────
 
-        if (mRoomFragment == null) {
+    @Override
+    public void onBackPressed() {
+        if (fullScreenFrameLayout.getVisibility() == View.VISIBLE) {
+            fullScreenFrameLayout.setVisibility(View.INVISIBLE);
+            removeRoomFragment();
             return;
         }
-
-        FragmentManager fragmentManager = getSupportFragmentManager();
-        FragmentTransaction fragmentTransaction = fragmentManager.beginTransaction();
-        fragmentTransaction.remove(mRoomFragment);
-        fragmentTransaction.commit();
-        mRoomFragment = null;
+        super.onBackPressed();
     }
 
-    private void initMediaButtons() {
-        mToggleCameraButton.setBackgroundColor(Color.GRAY);
-        mToggleMicrophoneButton.setBackgroundColor(Color.GRAY);
-        mToggleCameraButton.setEnabled(false);
-        mToggleMicrophoneButton.setEnabled(false);
-    }
-    //endregion
 }
